@@ -3,7 +3,7 @@
 param(
     [Parameter(Position = 0)]
     [string]$Command = "",
-    
+
     [Parameter(Position = 1, ValueFromRemainingArguments)]
     [string[]]$Arguments
 )
@@ -39,6 +39,86 @@ if (Test-Path $PROJECT_CONFIG) {
             $DEFAULT_VERSION = $Matches[1].Trim()
         }
     }
+}
+
+function InteractiveSelection {
+    param(
+        [string]$NODE_VERSIONS_DIR,
+        [string]$CONFIG_FILE
+    )
+
+    # Validate configuration
+    if ([string]::IsNullOrEmpty($NODE_VERSIONS_DIR)) {
+        Write-Host "Error: NODE_VERSIONS_DIR not configured"
+        Write-Host ""
+        Write-Host "Configuration file: $CONFIG_FILE"
+        Write-Host ""
+        Write-Host "Please set up your configuration first:"
+        Write-Host "  node_switcher.ps1 set NODE_VERSIONS_DIR=YOUR_PATH"
+        Write-Host "  node_switcher.ps1 set DEFAULT_VERSION=YOUR_VERSION"
+        Write-Host ""
+        Write-Host "For more information, run: node_switcher.ps1 help"
+        exit 1
+    }
+
+    # Check if versions directory exists
+    if (-not (Test-Path $NODE_VERSIONS_DIR)) {
+        Write-Host "Error: Versions directory not found: $NODE_VERSIONS_DIR"
+        Write-Host ""
+        Write-Host "Please check your configuration with: node_switcher.ps1 config"
+        Write-Host ""
+        Write-Host "To update the path, run:"
+        Write-Host "  node_switcher.ps1 set NODE_VERSIONS_DIR=YOUR_PATH"
+        exit 1
+    }
+
+    # Show current Node.js version
+    Write-Host "Current Node.js version:"
+    try {
+        node --version 2>$null
+    } catch {
+        Write-Host "Node.js not detected"
+    }
+
+    # List available versions
+    Write-Host ""
+    Write-Host "Available Node.js versions:"
+    Write-Host "======================="
+
+    $VERSIONS = Get-ChildItem -Path $NODE_VERSIONS_DIR -Directory | Where-Object { $_.Name -match '^v' } | Select-Object -ExpandProperty Name
+
+    if ($VERSIONS.Count -eq 0) {
+        Write-Host "No available Node.js versions found in: $NODE_VERSIONS_DIR"
+        Write-Host ""
+        Write-Host "Please check your versions directory and ensure it contains Node.js version folders."
+        Write-Host ""
+        Write-Host "Current configuration:"
+        & $PSScriptRoot\node_switcher.ps1 config
+        exit 1
+    }
+
+    for ($i = 0; $i -lt $VERSIONS.Count; $i++) {
+        Write-Host "$($i + 1). $($VERSIONS[$i])"
+    }
+
+    # User selects version
+    Write-Host ""
+    $CHOICE = Read-Host "Please enter version number (1-$($VERSIONS.Count))"
+
+    # Validate input and switch version
+    if ($CHOICE -notmatch "^\d+$" -or [int]$CHOICE -lt 1 -or [int]$CHOICE -gt $VERSIONS.Count) {
+        Write-Host "Error: Please enter a number between 1-$($VERSIONS.Count)"
+        exit 1
+    }
+
+    # Build new PATH
+    $SELECTED_VERSION = $VERSIONS[[int]$CHOICE - 1]
+    $SELECTED_PATH = Join-Path $NODE_VERSIONS_DIR $SELECTED_VERSION
+    $env:PATH = "$SELECTED_PATH;$ORIGINAL_PATH"
+
+    # Show switch result
+    Write-Host ""
+    Write-Host "Node.js version switched to: $SELECTED_VERSION"
 }
 
 # Handle set command
@@ -77,8 +157,8 @@ DEFAULT_VERSION=$DEFAULT_VERSION_TMP
     exit 0
 }
 
-# Handle show command
-if ($Command -eq "show") {
+# Handle config command
+if ($Command -eq "config") {
     Write-Host "Current Configuration:"
     Write-Host "======================="
     Write-Host "NODE_VERSIONS_DIR=$NODE_VERSIONS_DIR"
@@ -97,7 +177,7 @@ if ($Command -eq "show") {
 
 # Handle select command (skip default, interactive selection)
 if ($Command -eq "select") {
-    InteractiveSelection
+    InteractiveSelection -NODE_VERSIONS_DIR $NODE_VERSIONS_DIR -CONFIG_FILE $CONFIG_FILE
     exit
 }
 
@@ -107,7 +187,7 @@ if ($Command -eq "help") {
     Write-Host ""
     Write-Host "  node_switcher.ps1               - Select version (use default if set)"
     Write-Host "  node_switcher.ps1 select        - Interactive selection (skip default)"
-    Write-Host "  node_switcher.ps1 show          - Show current configuration"
+    Write-Host "  node_switcher.ps1 config        - Show current configuration"
     Write-Host "  node_switcher.ps1 set KEY=VALUE - Update configuration"
     Write-Host "  node_switcher.ps1 help          - Show this help message"
     Write-Host ""
@@ -135,7 +215,7 @@ if ([string]::IsNullOrEmpty($NODE_VERSIONS_DIR)) {
 if (-not (Test-Path $NODE_VERSIONS_DIR)) {
     Write-Host "Error: Versions directory not found: $NODE_VERSIONS_DIR"
     Write-Host ""
-    Write-Host "Please check your configuration with: node_switcher.ps1 show"
+        Write-Host "Please check your configuration with: node_switcher.ps1 config"
     Write-Host ""
     Write-Host "To update the path, run:"
     Write-Host "  node_switcher.ps1 set NODE_VERSIONS_DIR=YOUR_PATH"
@@ -160,80 +240,5 @@ if (-not [string]::IsNullOrEmpty($DEFAULT_VERSION)) {
 
 # If not switched, do interactive selection
 if (-not $SWITCH_DONE) {
-    InteractiveSelection
-}
-
-function InteractiveSelection {
-    # Validate configuration
-    if ([string]::IsNullOrEmpty($NODE_VERSIONS_DIR)) {
-        Write-Host "Error: NODE_VERSIONS_DIR not configured"
-        Write-Host ""
-        Write-Host "Configuration file: $CONFIG_FILE"
-        Write-Host ""
-        Write-Host "Please set up your configuration first:"
-        Write-Host "  node_switcher.ps1 set NODE_VERSIONS_DIR=YOUR_PATH"
-        Write-Host "  node_switcher.ps1 set DEFAULT_VERSION=YOUR_VERSION"
-        Write-Host ""
-        Write-Host "For more information, run: node_switcher.ps1 help"
-        exit 1
-    }
-
-    # Check if versions directory exists
-    if (-not (Test-Path $NODE_VERSIONS_DIR)) {
-        Write-Host "Error: Versions directory not found: $NODE_VERSIONS_DIR"
-        Write-Host ""
-        Write-Host "Please check your configuration with: node_switcher.ps1 show"
-        Write-Host ""
-        Write-Host "To update the path, run:"
-        Write-Host "  node_switcher.ps1 set NODE_VERSIONS_DIR=YOUR_PATH"
-        exit 1
-    }
-
-    # Show current Node.js version
-    Write-Host "Current Node.js version:"
-    try {
-        node --version 2>$null
-    } catch {
-        Write-Host "Node.js not detected"
-    }
-
-    # List available versions
-    Write-Host ""
-    Write-Host "Available Node.js versions:"
-    Write-Host "======================="
-
-    $VERSIONS = Get-ChildItem -Path $NODE_VERSIONS_DIR -Directory | Select-Object -ExpandProperty Name
-
-    if ($VERSIONS.Count -eq 0) {
-        Write-Host "No available Node.js versions found in: $NODE_VERSIONS_DIR"
-        Write-Host ""
-        Write-Host "Please check your versions directory and ensure it contains Node.js version folders."
-        Write-Host ""
-        Write-Host "Current configuration:"
-        & $PSScriptRoot\node_switcher.ps1 show
-        exit 1
-    }
-
-    for ($i = 0; $i -lt $VERSIONS.Count; $i++) {
-        Write-Host "$($i + 1). $($VERSIONS[$i])"
-    }
-
-    # User selects version
-    Write-Host ""
-    $CHOICE = Read-Host "Please enter version number (1-$($VERSIONS.Count))"
-
-    # Validate input and switch version
-    if ($CHOICE -notmatch "^\d+$" -or [int]$CHOICE -lt 1 -or [int]$CHOICE -gt $VERSIONS.Count) {
-        Write-Host "Error: Please enter a number between 1-$($VERSIONS.Count)"
-        exit 1
-    }
-
-    # Build new PATH
-    $SELECTED_VERSION = $VERSIONS[[int]$CHOICE - 1]
-    $SELECTED_PATH = Join-Path $NODE_VERSIONS_DIR $SELECTED_VERSION
-    $env:PATH = "$SELECTED_PATH;$ORIGINAL_PATH"
-
-    # Show switch result
-    Write-Host ""
-    Write-Host "Node.js version switched to: $SELECTED_VERSION"
+    InteractiveSelection -NODE_VERSIONS_DIR $NODE_VERSIONS_DIR -CONFIG_FILE $CONFIG_FILE
 }

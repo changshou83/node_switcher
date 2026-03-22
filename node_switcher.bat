@@ -68,8 +68,8 @@ if /i "%~1"=="set" (
     exit /b 0
 )
 
-:: Handle show command
-if /i "%~1"=="show" (
+:: Handle config command
+if /i "%~1"=="config" (
     echo Current Configuration:
     echo =======================
     echo NODE_VERSIONS_DIR=!NODE_VERSIONS_DIR!
@@ -96,7 +96,7 @@ if /i "%~1"=="help" (
     echo.
     echo   node_switcher               - Select version (use default if set)
     echo   node_switcher select        - Interactive selection (skip default)
-    echo   node_switcher show          - Show current configuration
+    echo   node_switcher config        - Show current configuration
     echo   node_switcher set KEY=VALUE - Update configuration
     echo   node_switcher help          - Show this help message
     echo.
@@ -126,7 +126,7 @@ if "!NODE_VERSIONS_DIR!"=="" (
 if not exist "!NODE_VERSIONS_DIR!" (
     echo Error: Versions directory not found: !NODE_VERSIONS_DIR!
     echo.
-    echo Please check your configuration with: node_switcher show
+    echo Please check your configuration with: node_switcher config
     echo.
     echo To update the path, run:
     echo   node_switcher set NODE_VERSIONS_DIR=YOUR_PATH
@@ -178,7 +178,7 @@ if "!NODE_VERSIONS_DIR!"=="" (
 if not exist "!NODE_VERSIONS_DIR!" (
     echo Error: Versions directory not found: !NODE_VERSIONS_DIR!
     echo.
-    echo Please check your configuration with: node_switcher show
+    echo Please check your configuration with: node_switcher config
     echo.
     echo To update the path, run:
     echo   node_switcher set NODE_VERSIONS_DIR=YOUR_PATH
@@ -195,7 +195,7 @@ echo Available Node.js versions:
 echo =======================
 set /a COUNT=0
 
-for /d %%i in ("!NODE_VERSIONS_DIR!\*") do (
+for /d %%i in ("!NODE_VERSIONS_DIR!\v*") do (
     set /a COUNT+=1
     set VERSIONS[!COUNT!]=%%~nxi
     echo !COUNT!. %%~nxi
@@ -208,7 +208,7 @@ if %COUNT% equ 0 (
     echo Please check your versions directory and ensure it contains Node.js version folders.
     echo.
     echo Current configuration:
-    node_switcher show
+    node_switcher config
     exit /b 1
 )
 

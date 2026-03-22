@@ -63,7 +63,7 @@ node_switcher select
 |------|------|
 | `node_switcher` | 使用默认版本（若已设置），否则进入交互选择 |
 | `node_switcher select` | 强制进入交互式选择 |
-| `node_switcher show` | 显示当前配置 |
+| `node_switcher config` | 显示当前配置 |
 | `node_switcher set KEY=VALUE` | 更新配置项 |
 | `node_switcher help` | 显示帮助信息 |
 
